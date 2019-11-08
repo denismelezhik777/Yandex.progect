@@ -1,0 +1,516 @@
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+import sqlite3
+from PIL import Image
+
+con = sqlite3.connect('library.db')
+cur = con.cursor()
+
+
+class Meny(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(300, 300, 300, 300)
+        self.setWindowTitle('Меню')
+
+        self.pixmap = QPixmap('WWW5.jpg')
+        self.image = QLabel(self)
+        self.image.move(115, -75)
+        self.image.resize(250, 250)
+        self.image.setPixmap(self.pixmap)
+
+        self.work_book = QPushButton("Добавление и просмотр книг", self)
+        self.work_book.resize(self.work_book.sizeHint())
+        self.work_book.move(65, 97)
+        self.work_book.clicked.connect(self.adding)
+
+        self.work_users = QPushButton("Добавление и просмотр пользователей", self)
+        self.work_users.resize(self.work_users.sizeHint())
+        self.work_users.move(35, 147)
+        self.work_users.clicked.connect(self.users)
+
+        self.book_delivery = QPushButton("Выдача книг пользователям", self)
+        self.book_delivery.resize(self.book_delivery.sizeHint())
+        self.book_delivery.move(65, 197)
+        self.book_delivery.clicked.connect(self.adding_records)
+
+        self.сustomization = QPushButton("Настройка", self)
+        self.сustomization.resize(self.сustomization.sizeHint())
+        self.сustomization.move(105, 247)
+        self.сustomization.clicked.connect(self.tuning)
+
+    def adding(self):
+        self.work_book = WorkBook()
+        self.work_book.show()
+
+    def users(self):
+        self.work_users = WorkUsers()
+        self.work_users.show()
+
+    def adding_records(self):
+        self.book_delivery = BookDelivery()
+        self.book_delivery.show()
+
+    def tuning(self):
+        self.сustomization = Tuning()
+        self.сustomization.show()
+
+
+class WorkBook(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(300, 300, 1200, 800)
+        self.setWindowTitle('Библиотека')
+
+        self.back = QPushButton("Назад", self)
+        self.back.resize(self.back.sizeHint())
+        self.back.move(0, 0)
+        self.back.clicked.connect(self.close_window)
+
+        self.search = QPushButton('Поиск', self)
+        self.search.resize(self.search.sizeHint())
+        self.search.move(950, 97)
+        self.search.clicked.connect(self.search_books)
+
+        self.add_button = QPushButton('Добавить книгу', self)
+        self.add_button.resize(self.add_button.sizeHint())
+        self.add_button.move(950, 147)
+        self.add_button.clicked.connect(self.adding)
+
+        self.book_сhange = QPushButton('Изменить информацию о книге', self)
+        self.book_сhange.resize(self.book_сhange.sizeHint())
+        self.book_сhange.move(950, 197)
+        self.book_сhange.clicked.connect(self.change_)
+
+        self.book_delеtе = QPushButton('Удалить книгу', self)
+        self.book_delеtе.resize(self.book_delеtе.sizeHint())
+        self.book_delеtе.move(950, 247)
+        self.book_delеtе.clicked.connect(self.delete_)
+
+        self.label = QLabel(self)
+        self.label.setText("Автор:")
+        self.label.move(230, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Жанр:")
+        self.label.move(430, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Название:")
+        self.label.move(630, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Год издания:")
+        self.label.move(830, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Кол - во:")
+        self.label.move(1030, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Спец. номер книги:")
+        self.label.move(30, 30)
+
+        self.nambe_1 = QLineEdit(self)
+        self.nambe_1.move(30, 50)
+
+        self.nambe_2 = QLineEdit(self)
+        self.nambe_2.move(230, 50)
+
+        self.nambe_3 = QLineEdit(self)
+        self.nambe_3.move(430, 50)
+
+        self.nambe_4 = QLineEdit(self)
+        self.nambe_4.move(630, 50)
+
+        self.nambe_5 = QLineEdit(self)
+        self.nambe_5.move(830, 50)
+
+        self.nambe_6 = QLineEdit(self)
+        self.nambe_6.move(1030, 50)
+
+        self.qutput = QTextBrowser(self)
+        self.qutput.move(30, 100)
+        self.qutput.resize(900, 500)
+
+        self.cb = QCheckBox('Только учебники', self)  # будет работать в следующий версии приложения
+        self.cb.move(930, 10)
+        self.cb.toggle()
+        self.cb.stateChanged.connect(self.changeTitle)
+
+    def search_books(self):
+        result = cur.execute(f'''
+        SELECT b.id, b.name_books, g.title, a.name, b.amount, b.data
+        FROM books AS b
+        INNER JOIN genres AS g
+        ON b.genre = g.id
+        INNER JOIN name_autor AS a
+        ON b.name_autor = a.id
+        WHERE b.name_books like '{self.nambe_4.text().lower()}%'
+        AND
+        g.title like '{self.nambe_3.text().lower()}%'
+        AND
+        a.name like '{self.nambe_2.text().lower()}%'
+        OR
+        b.amount like '{self.nambe_5.text()}%'
+        OR
+        b.data like '{self.nambe_6.text()}'
+        OR
+        b.id like '{self.nambe_1.text()}'
+        ''').fetchall()
+        n = ''
+        i = 1
+        for elem in result:
+            n += f'{i}) Название: {elem[1]}, жанр: {elem[2]}, автор: {elem[3]},' \
+                f' кол-во: {elem[4]}, дата издания: {elem[4]}, спец. номер: {elem[0]} \n'
+            i += 1
+        self.qutput.setText(n)
+
+    def adding(self):
+        if self.nambe_3.text() != '':
+            if self.nambe_2.text() != '':
+                if self.nambe_4.text() != '':
+                    cur.execute(f'''
+                    INSERT INTO books(name_autor, genre, name_books, data, amount) VALUES({self.nambe_2.text()}, {self.nambe_3.text()}, '{self.nambe_4.text()}', {0 if self.nambe_5.text() != ' ' else self.nambe_5.text()}, {0 if self.nambe_6.text() != ' ' else self.nambe_6.text()})
+                                ''').fetchall()
+                    self.qutput.setText('Книга добавлен')
+                else:
+                    self.qutput.setText('Напишите пожалуйста название книги')
+            else:
+                self.qutput.setText('Укажите пожалуйста автора')
+        else:
+            self.qutput.setText('Укажите пожалуйста жанр')
+        con.commit()
+
+    def close_window(self):
+        # self.w2 = Meny()
+        # self.w2.show()
+        self.hide()
+
+    def change_(self):
+        if self.nambe_1.text() != '':
+            cur.execute(f'''
+            UPDATE Users
+            SET name_books = '{self.nambe_4.text()}', genre = {(self.nambe_3.text())},
+             name_autor = {(self.nambe_2.text())}, amount = {(self.nambe_6.text())}, data = {(self.nambe_5.text())}
+            WHERE id = {(self.nambe_1.text())}
+                            ''').fetchall()
+
+            self.qutput.setText('Информация о пользователе изменена')
+        else:
+            self.qutput.setText('Напишите пожалуйста id книги')
+        con.commit()
+
+    def delete_(self):
+        if self.nambe_1.text() != '':
+            cur.execute(f'''
+            DELETE from books
+            WHERE id = {(self.nambe_1.text())}
+                            ''').fetchall()
+
+            self.qutput.setText('Книга удалёна')
+        else:
+            self.qutput.setText('Напишите пожалуйста id книги')
+        con.commit()
+
+    def changeTitle(self, state):  # будет работать в следующий версии приложения
+        if state == Qt.Checked:
+            self.setWindowTitle('*)')
+        else:
+            self.setWindowTitle(':)')
+
+
+class WorkUsers(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(300, 300, 1200, 800)
+        self.setWindowTitle('Библиотека')
+
+        self.back = QPushButton("Назад", self)
+        self.back.resize(self.back.sizeHint())
+        self.back.move(0, 0)
+        self.back.clicked.connect(self.close_window)
+
+        self.search = QPushButton('Поиск', self)
+        self.search.resize(self.search.sizeHint())
+        self.search.move(830, 47)
+        self.search.clicked.connect(self.search_books)
+
+        self.add_user = QPushButton('Добавить пользователя', self)
+        self.add_user.resize(self.add_user.sizeHint())
+        self.add_user.move(950, 147)
+        self.add_user.clicked.connect(self.additive)
+
+        self.change_user_information = QPushButton('Изменить информацию о пользователе', self)
+        self.change_user_information.resize(self.change_user_information.sizeHint())
+        self.change_user_information.move(950, 197)
+        self.change_user_information.clicked.connect(self.user_information)
+
+        self.delete_user = QPushButton('Удалить пользователя', self)
+        self.delete_user.resize(self.delete_user.sizeHint())
+        self.delete_user.move(950, 247)
+        self.delete_user.clicked.connect(self.delete_)
+
+        self.label = QLabel(self)
+        self.label.setText("Спец. номер пользователя:")
+        self.label.move(30, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("ФИО пользователя:")
+        self.label.move(230, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Номер телефона пользователя:")
+        self.label.move(430, 30)
+
+        self.nambe_1 = QLineEdit(self)
+        self.nambe_1.move(30, 50)
+
+        self.nambe_2 = QLineEdit(self)
+        self.nambe_2.move(230, 50)
+
+        self.nambe_3 = QLineEdit(self)
+        self.nambe_3.move(430, 50)
+
+        self.qutput = QTextBrowser(self)
+        self.qutput.move(30, 100)
+        self.qutput.resize(900, 500)
+
+    def search_books(self):
+        result = cur.execute(f'''
+        SELECT * FROM Users
+        WHERE name like '{self.nambe_2.text()}%'
+        OR phone like '{self.nambe_3.text()}'
+        AND id like '%{self.nambe_1.text()}'
+        ''').fetchall()
+        n = ''
+        i = 1
+        for elem in result:
+            # if elem[2] == None:
+            #    elem[2] = 'Нету'
+            n += f'{i}) Имя пользователя: {elem[1]}, номер телефона:' \
+                f' {"неизвестен" if elem[2] == None else elem[2]},' \
+                f' спец. номер: {elem[0]}\n'
+            i += 1
+        self.qutput.setText(n)
+        # # self.qutput.setText('1')
+
+    def additive(self):
+        if self.nambe_2.text() != '':
+            cur.execute(f'''
+            INSERT INTO Users(name, phone) VALUES('{self.nambe_2.text()}', '{self.nambe_3.text()}')
+                            ''').fetchall()
+
+            self.qutput.setText('Пользователь добавлен')
+        else:
+            self.qutput.setText('Напишите пожалуйста ФИО')
+        con.commit()
+
+    def user_information(self):
+        if self.nambe_1.text() != '':
+            cur.execute(f'''
+            UPDATE Users
+            SET name = '{self.nambe_2.text()}', phone = '{(self.nambe_3.text())}'
+            WHERE id = {(self.nambe_1.text())}
+                            ''').fetchall()
+
+            self.qutput.setText('Информация о пользователе изменена')
+        else:
+            self.qutput.setText('Напишите пожалуйста id пользователя')
+        con.commit()
+
+    def delete_(self):
+        if self.nambe_1.text() != '':
+            cur.execute(f'''
+            DELETE from Users
+            WHERE id = {(self.nambe_1.text())}
+                            ''').fetchall()
+
+            self.qutput.setText('Пользователь удалён')
+        else:
+            self.qutput.setText('Напишите пожалуйста id')
+        con.commit()
+
+    def close_window(self):
+        # self.w2 = Meny()
+        # self.w2.show()
+        self.hide()
+
+
+class BookDelivery(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(300, 300, 1200, 800)
+        self.setWindowTitle('Библиотека')
+
+        self.back = QPushButton("Назад", self)
+        self.back.resize(self.back.sizeHint())
+        self.back.move(0, 0)
+        self.back.clicked.connect(self.close_window)
+
+        self.search = QPushButton('Поиск', self)
+        self.search.resize(self.search.sizeHint())
+        self.search.move(830, 47)
+        self.search.clicked.connect(self.search_books)
+
+        self.delete_user = QPushButton(' Удалить запись ', self)
+        self.delete_user.resize(self.delete_user.sizeHint())
+        self.delete_user.move(950, 197)
+        self.delete_user.clicked.connect(self.delete_)
+
+        self.add_note = QPushButton('Добавить запись', self)
+        self.add_note.resize(self.add_note.sizeHint())
+        self.add_note.move(950, 147)
+        self.add_note.clicked.connect(self.add_)
+
+        self.label = QLabel(self)
+        self.label.setText("Спец. номер:")
+        self.label.move(30, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Спец. номер пользователя:")
+        self.label.move(230, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Спец. номер книжки:")
+        self.label.move(430, 30)
+
+        self.label = QLabel(self)
+        self.label.setText("Комментарий:")
+        self.label.move(630, 30)
+
+        self.nambe_1 = QLineEdit(self)
+        self.nambe_1.move(30, 50)
+
+        self.nambe_2 = QLineEdit(self)
+        self.nambe_2.move(230, 50)
+
+        self.nambe_3 = QLineEdit(self)
+        self.nambe_3.move(430, 50)
+
+        self.nambe_4 = QLineEdit(self)
+        self.nambe_4.move(630, 50)
+
+        self.qutput = QTextBrowser(self)
+        self.qutput.move(30, 100)
+        self.qutput.resize(900, 500)
+
+    def search_books(self):
+        #  if self.nambe_1.text() != '':
+        result = cur.execute(f'''
+                            SELECT ib.id, u.name, b.name_books, comment
+                            FROM info_books AS ib
+                            INNER JOIN Users AS u
+                            ON ib.id = u.id
+                            INNER JOIN books AS b
+                            ON ib.id = b.id
+                            WHERE u.name like '%'
+                            AND
+                            b.name_books like '%'
+                            ''').fetchall()
+        #  else:
+        #   self.qutput.setText('Напишите пожалуйста имя пользователя')
+        n = ''
+        i = 1
+        for elem in result:
+            # if elem[2] == None:
+            #    elem[2] = 'Нету'
+            n += f'{i}) пользователь: {elem[1]},' \
+                f' книжка: {elem[2]}, комментарий:' \
+                f' {"отсутствует" if elem[3] == None else elem[3]}, id: {elem[0]}\n'
+            i += 1
+            self.qutput.setText(n)
+        # # self.qutput.setText('1')
+
+    def add_(self):
+        if self.nambe_2.text().isdigit():
+            if self.nambe_3.text().isdigit():
+                cur.execute(f'''
+                INSERT INTO info_books(id_users, id_book, comment)
+                 VALUES({self.nambe_2.text()},
+{self.nambe_3.text()}, '{self.nambe_4.text()}')
+                            ''').fetchall()
+                self.qutput.setText('Запись добавлена')
+            else:
+                self.qutput.setText('Спец. номер книги')
+        else:
+            self.qutput.setText('Спец. номер пользователя')
+        con.commit()
+
+    def delete_(self):
+        if self.nambe_1.text() != '':
+            cur.execute(f'''
+            DELETE from info_books
+            WHERE id = {(self.nambe_1.text())}
+                            ''').fetchall()
+
+            self.qutput.setText('Запись удалёна')
+        else:
+            self.qutput.setText('Напишите пожалуйста id записи')
+        con.commit()
+
+    def close_window(self):
+        # self.w2 = Meny()
+        # self.w2.show()
+        self.hide()
+
+
+class Tuning(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setGeometry(300, 300, 300, 300)
+        self.setWindowTitle('Настройки')
+
+        self.back = QPushButton("Назад", self)
+        self.back.resize(self.back.sizeHint())
+        self.back.move(0, 0)
+        self.back.clicked.connect(self.close_window)
+
+        self.change_photo = QPushButton("Изменить фото на новое", self)
+        self.change_photo.resize(self.change_photo.sizeHint())
+        self.change_photo.move(80, 47)
+        self.change_photo.clicked.connect(self.pil_change_photo)
+
+    def close_window(self):
+        # self.w2 = Meny()
+        # self.w2.show()
+        self.hide()
+
+    def pil_change_photo(self):
+        fname = QFileDialog.getOpenFileName(self, 'Выбрать картинку', '')[0]
+        size = (64, 64)
+        original_image = Image.open(fname)
+        # width, height = original_image.size
+        # print('The original image size is {wide} wide x {height} '
+        #       'high'.format(wide=width, height=height))
+        resized_image = original_image.resize(size)
+        # width, height = resized_image.size
+        # print('The resized image size is {wide} wide x {height} '
+        #       'high'.format(wide=width, height=height))
+        # resized_image.show()
+        resized_image.save('WWW5.jpg')
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = Meny()
+    ex.show()
+    sys.exit(app.exec())
+    
